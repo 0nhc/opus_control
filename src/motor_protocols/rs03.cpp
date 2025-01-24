@@ -5,7 +5,28 @@
 
 
 RS03::RS03(){
+    this->_master_can_id = MASTER_CAN_ID;
 };
+
+can_msgs::msg::Frame RS03::encodeEnableCommand(uint8_t motor_id){
+    this->_enable_command.is_extended = true;
+    this->_enable_command.is_error = false;
+    this->_enable_command.is_rtr = false;
+    this->_enable_command.dlc = 0x08; // 8 bits
+    this->_enable_command.id = (ENABLE_MODE << 24) | // Communication type: Motion control (bit 28~24)
+                               (this->_master_can_id << 8) | // Master CAN ID in bit 23~8
+                               motor_id; // Motor ID in bit 7~0
+    this->_enable_command.data[0] = 0x00;
+    this->_enable_command.data[1] = 0x00;
+    this->_enable_command.data[2] = 0x00;
+    this->_enable_command.data[3] = 0x00;
+    this->_enable_command.data[4] = 0x00;
+    this->_enable_command.data[5] = 0x00;
+    this->_enable_command.data[6] = 0x00;
+    this->_enable_command.data[7] = 0x00;
+
+    return this->_enable_command;
+}
 
 can_msgs::msg::Frame RS03::encodeTorqueCommand(uint8_t motor_id, float torque){
     // Limit the torque value to -1.0 to 1.0
@@ -18,24 +39,30 @@ can_msgs::msg::Frame RS03::encodeTorqueCommand(uint8_t motor_id, float torque){
     uint16_t encoded_Kp = float_to_uint16(0.0, KP_MIN, KP_MAX);
     uint16_t encoded_Kd = float_to_uint16(0.0, KD_MIN, KD_MAX);
 
-    _torque_command.is_extended = true;
-    _torque_command.is_error = false;
-    _torque_command.is_rtr = false;
-    _torque_command.dlc = 0x08; // 8 bits
+    this->_torque_command.is_extended = true;
+    this->_torque_command.is_error = false;
+    this->_torque_command.is_rtr = false;
+    this->_torque_command.dlc = 0x08; // 8 bits
 
-    _torque_command.id = (0x01 << 24) | // Communication type: Motion control (bit 28~24)
+    this->_torque_command.id = (MOTION_CONTROL_MODE << 24) | // Communication type: Motion control (bit 28~24)
                          (encoded_torque << 8) | // Torque in bit 23~8
-                          motor_id;
+                          motor_id; // Motor ID in bit 7~0
 
     // Fill the data payload (big-endian order)
-    _torque_command.data[0] = (encoded_angle >> 8) & 0xFF; // MSB of angle
-    _torque_command.data[1] = encoded_angle & 0xFF;        // LSB of angle
-    _torque_command.data[2] = (encoded_speed >> 8) & 0xFF; // MSB of speed
-    _torque_command.data[3] = encoded_speed & 0xFF;        // LSB of speed
-    _torque_command.data[4] = (encoded_Kp >> 8) & 0xFF;    // MSB of Kp
-    _torque_command.data[5] = encoded_Kp & 0xFF;           // LSB of Kp
-    _torque_command.data[6] = (encoded_Kd >> 8) & 0xFF;    // MSB of Kd
-    _torque_command.data[7] = encoded_Kd & 0xFF;           // LSB of Kd
+    this->_torque_command.data[0] = (encoded_angle >> 8) & 0xFF; // MSB of angle
+    this->_torque_command.data[1] = encoded_angle & 0xFF;        // LSB of angle
+    this->_torque_command.data[2] = (encoded_speed >> 8) & 0xFF; // MSB of speed
+    this->_torque_command.data[3] = encoded_speed & 0xFF;        // LSB of speed
+    this->_torque_command.data[4] = (encoded_Kp >> 8) & 0xFF;    // MSB of Kp
+    this->_torque_command.data[5] = encoded_Kp & 0xFF;           // LSB of Kp
+    this->_torque_command.data[6] = (encoded_Kd >> 8) & 0xFF;    // MSB of Kd
+    this->_torque_command.data[7] = encoded_Kd & 0xFF;           // LSB of Kd
 
     return this->_torque_command;
+}
+
+float RS03::decodePositionFeedback(can_msgs::msg::Frame frame){
+    // Extract the angle from the CAN frame
+    uint16_t angle = (frame.data[0] << 8) | frame.data[1];
+    return (angle * (P_MAX - P_MIN) / 65535.0) + P_MIN;
 }

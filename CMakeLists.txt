@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(can_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 # Add include directories
 include_directories(include)
@@ -30,6 +31,7 @@ target_include_directories(${PROJECT_NAME}_lib PUBLIC
 ament_target_dependencies(${PROJECT_NAME}_lib
   rclcpp
   can_msgs
+  tf2_ros
 )
 
 # Install the library
@@ -44,6 +46,7 @@ add_executable(test_rs03_node src/test_rs03_node.cpp)
 ament_target_dependencies(test_rs03_node
   rclcpp
   can_msgs
+  tf2_ros
 )
 target_link_libraries(test_rs03_node
   ${PROJECT_NAME}_lib
